@@ -1,0 +1,3 @@
+Alliance Bot!
+
+To run:  ./Towerlog -d -j <jabber username> -r <jabber room @ conference.server.com> -p <jabber password> -n <BotName>
