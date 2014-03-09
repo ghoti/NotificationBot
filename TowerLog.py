@@ -24,26 +24,62 @@ else:
 
 #A wonky 'wish i was a switch case' dict to hold our important and spammy notifications
 #Later these will point to functions instead of silly strings when we call notificationtexts
-def noteid(type_id):
+#We use functions as dictionary values so that later when we get notification details we can handle
+#different responses from the api for each type of notification
+def noteid():
     return{
-        14:'Bounty!',
-        16:'Someone apped to Fweddit!',
-        17:'Someone was DENIED into Fweddit!',
-        18:'Someone was ACCEPTED into Fweddit!',
-        45:'Something got anchored!',
-        46:'A structure went vulnerable in our sov!',
-        47:'A structure went invulnerable in our sov!',
-        48:'Someone dropped SBUs in our sov!',
-        76:'A POS NEEDS MOAR FUEL PLS',
-        86:'Someone shot a TCU in our sov!',
-        87:'Someone shot our SBU!',
-        88:'Someone shot an IHUB in our sov!',
-        93:'Someone shot a POCO of ours!',
-        94:'One of our POCOs was reinforced!',
-        96:'We are in danger of being kicked from FW!',
-        97:'We got kicked from FW.  RIP.',
-        128:'Someone joined fweddit!'
+        14:bounty,
+        16:application,
+        17:denial,
+        18:acceptance,
+        45:anchoralert,
+        46:vulnstruct,
+        47:invulnstruct,
+        48:sbualert,
+        76:posfuel,
+        86:tcualert,
+        87:sbushot,
+        88:ihubalert,
+        93:pocoalert,
+        94:pocorf,
+        96:fwwarn,
+        97:fwkick,
+        128:joinfweddit
     }
+def bounty():
+    return 'a bounty was claimed!'
+def application():
+    return 'Someone apped to fweddit!'
+def denial():
+    return 'Someone was denied into fweddit!'
+def acceptance():
+    return 'Someone was accepted into fweddit!'
+def anchoralert():
+    return 'Something was anchroed in our sov!'
+def vulnstruct():
+    return 'Something went vulnerable in our sov!'
+def invulnstruct():
+    return 'SOmething went invulnerable in our sov!'
+def sbualert():
+    return 'Someone anchored an SBU in our sov!'
+def posfuel():
+    return 'A POS we own needs moar fuel pls!!!'
+def tcualert():
+    return 'Someone shot a TCU we own!'
+def sbushot():
+    return 'Someone shot an SBU we own!'
+def ihubalert():
+    return 'Someone shot an IHUB we own!'
+def pocoalert():
+    return 'Someone shot a POCO we own!'
+def pocorf():
+    return 'Someone reinforced a POCO we own!'
+def fwwarn():
+    return 'We are in danger of being kicked from FW!'
+def fwkick():
+    return 'We have been kicked from FW! RIP!'
+def joinfweddit():
+    return 'Someone joined Fweddit!'
 
 class MUCBot(sleekxmpp.ClientXMPP):
 
@@ -186,7 +222,8 @@ class MUCBot(sleekxmpp.ClientXMPP):
             if timesent > now-datetime.timedelta(minutes=30):
                 sendme = noteid(notes[0][notificationID]['type_id']).get(notes[0][notificationID]['type_id'], '')
                 if sendme:
-                    self.send_message(mto=mess['from'].bare, mbody=sendme, mtype='groupchat')
+                    message = sendme()
+                    self.send_message(mto=mess['from'].bare, mbody=message, mtype='groupchat')
 
     def muc_online(self, presence):
         """
