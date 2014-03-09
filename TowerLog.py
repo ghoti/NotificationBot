@@ -22,64 +22,7 @@ if sys.version_info < (3, 0):
 else:
     raw_input = input
 
-#A wonky 'wish i was a switch case' dict to hold our important and spammy notifications
-#Later these will point to functions instead of silly strings when we call notificationtexts
-#We use functions as dictionary values so that later when we get notification details we can handle
-#different responses from the api for each type of notification
-def noteid():
-    return{
-        14:bounty,
-        16:application,
-        17:denial,
-        18:acceptance,
-        45:anchoralert,
-        46:vulnstruct,
-        47:invulnstruct,
-        48:sbualert,
-        76:posfuel,
-        86:tcualert,
-        87:sbushot,
-        88:ihubalert,
-        93:pocoalert,
-        94:pocorf,
-        96:fwwarn,
-        97:fwkick,
-        128:joinfweddit
-    }
-def bounty():
-    return 'a bounty was claimed!'
-def application():
-    return 'Someone apped to fweddit!'
-def denial():
-    return 'Someone was denied into fweddit!'
-def acceptance():
-    return 'Someone was accepted into fweddit!'
-def anchoralert():
-    return 'Something was anchroed in our sov!'
-def vulnstruct():
-    return 'Something went vulnerable in our sov!'
-def invulnstruct():
-    return 'SOmething went invulnerable in our sov!'
-def sbualert():
-    return 'Someone anchored an SBU in our sov!'
-def posfuel():
-    return 'A POS we own needs moar fuel pls!!!'
-def tcualert():
-    return 'Someone shot a TCU we own!'
-def sbushot():
-    return 'Someone shot an SBU we own!'
-def ihubalert():
-    return 'Someone shot an IHUB we own!'
-def pocoalert():
-    return 'Someone shot a POCO we own!'
-def pocorf():
-    return 'Someone reinforced a POCO we own!'
-def fwwarn():
-    return 'We are in danger of being kicked from FW!'
-def fwkick():
-    return 'We have been kicked from FW! RIP!'
-def joinfweddit():
-    return 'Someone joined Fweddit!'
+
 
 class MUCBot(sleekxmpp.ClientXMPP):
 
@@ -124,6 +67,91 @@ class MUCBot(sleekxmpp.ClientXMPP):
         self.add_event_handler("muc::%s::got_online" % self.room,
                                self.muc_online)
 
+        #DIDNT WANT THAT QUICK STARTUP TIME ANYWAY JESUS FUCK
+        self.moons = {}
+        with open('MoonData.txt') as f:
+            for line in f:
+                (key, val) = line.split(',')
+                self.moons[int(key.strip('\xef\xbb\xbf'))] = val.strip('\n')
+
+
+    #A wonky 'wish i was a switch case' dict to hold our important and spammy notifications
+    #Later these will point to functions instead of silly strings when we call notificationtexts
+    #We use functions as dictionary values so that later when we get notification details we can handle
+    #different responses from the api for each type of notification
+    def noteid(self):
+        return{
+            14:self.bounty,
+            16:self.application,
+            17:self.denial,
+            18:self.acceptance,
+            45:self.anchoralert,
+            46:self.vulnstruct,
+            47:self.invulnstruct,
+            48:self.sbualert,
+            76:self.posfuel,
+            86:self.tcualert,
+            87:self.sbushot,
+            88:self.ihubalert,
+            93:self.pocoalert,
+            94:self.pocorf,
+            96:self.fwwarn,
+            97:self.fwkick,
+            128:self.joinfweddit #join note is same as app note with different id hue
+        }
+    def bounty(self, id):
+        return 'a bounty was claimed!'
+    def application(self, id):
+        app = self.gettext(id)
+        eve = evelink.eve.EVE()
+        name = eve.character_name_from_id(app[id]['charID'])
+        return '%s has apped to Fweddit!' % name[0]
+        #return 'Someone apped to fweddit!'
+    def denial(self, id):
+        return 'Someone was denied into fweddit!'
+    def acceptance(self, id):
+        return 'Someone was accepted into fweddit!'
+    def anchoralert(self, id):
+        return 'Something was anchroed in our sov!'
+    def vulnstruct(self, id):
+        return 'Something went vulnerable in our sov!'
+    def invulnstruct(self, id):
+        return 'Something went invulnerable in our sov!'
+    def sbualert(self, id):
+        return 'Someone anchored an SBU in our sov!'
+    def posfuel(self, id):
+        #I HAS NO IDEA WHAT INFO IS USEFUL HERE
+        pos = self.gettext(id)
+        return 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (self.moons[pos[id]['moonID']], pos[id]['- quantity'])
+    def tcualert(self, id):
+        return 'Someone shot a TCU we own!'
+    def sbushot(self, id):
+        return 'Someone shot an SBU we own!'
+    def ihubalert(self, id):
+        return 'Someone shot an IHUB we own!'
+    def pocoalert(self, id):
+        return 'Someone shot a POCO we own!'
+    def pocorf(self, id):
+        return 'Someone reinforced a POCO we own!'
+    def fwwarn(self, id):
+        return 'We are in danger of being kicked from FW!'
+    def fwkick(self, id):
+        return 'We have been kicked from FW! RIP!'
+    def joinfweddit(self, id):
+        app = self.gettext(id)
+        eve = evelink.eve.EVE()
+        name = eve.character_name_from_id(app[id]['charID'])
+        return '%s has joined Fweddit!' % name[0]
+
+    def gettext(self,notificationid):
+        api = evelink.api.API(api_key=(self.keyid, self.vcode))
+        eve = evelink.eve.EVE()
+        id = eve.character_id_from_name(self.charactername)
+        char = evelink.char.Char(char_id=id, api=api)
+
+        notes = char.notification_texts(notification_ids=(notificationid))
+        return notes[0]
+
 
     def start(self, event):
         """
@@ -151,7 +179,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
         # due to ccp api limitations, then schedule the same job to be ran every 30 minutes (give or take 30 seconds)
 
         self.towers()
-        self.schedule('towertimer', 1801, self.towers, repeat=True)
+        self.schedule('towertimer', 1800, self.towers, repeat=True)
 
 
     def muc_message(self, msg):
@@ -220,9 +248,9 @@ class MUCBot(sleekxmpp.ClientXMPP):
             timesent = datetime.datetime.fromtimestamp(timesent)
             #print timesent, now-datetime.timedelta(minutes=60)
             if timesent > now-datetime.timedelta(minutes=30):
-                sendme = noteid(notes[0][notificationID]['type_id']).get(notes[0][notificationID]['type_id'], '')
+                sendme = self.noteid().get(notes[0][notificationID]['type_id'], '')
                 if sendme:
-                    message = sendme()
+                    message = sendme(notificationID)
                     self.send_message(mto=mess['from'].bare, mbody=message, mtype='groupchat')
 
     def muc_online(self, presence):
