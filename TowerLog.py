@@ -22,7 +22,12 @@ if sys.version_info < (3, 0):
 else:
     raw_input = input
 
-
+#DIDNT WANT THAT QUICK STARTUP TIME ANYWAY JESUS FUCK
+moons = {}
+with open('MoonData.txt') as f:
+    for line in f:
+        (key, val) = line.split(',')
+        moons[int(key.strip('\xef\xbb\xbf'))] = val.strip('\n')
 
 class MUCBot(sleekxmpp.ClientXMPP):
 
@@ -67,12 +72,9 @@ class MUCBot(sleekxmpp.ClientXMPP):
         self.add_event_handler("muc::%s::got_online" % self.room,
                                self.muc_online)
 
-        #DIDNT WANT THAT QUICK STARTUP TIME ANYWAY JESUS FUCK
-        self.moons = {}
-        with open('MoonData.txt') as f:
-            for line in f:
-                (key, val) = line.split(',')
-                self.moons[int(key.strip('\xef\xbb\xbf'))] = val.strip('\n')
+
+
+        self.lastnotification = 'There are no previous notifications'
 
 
     #A wonky 'wish i was a switch case' dict to hold our important and spammy notifications
@@ -122,7 +124,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
     def posfuel(self, id):
         #I HAS NO IDEA WHAT INFO IS USEFUL HERE
         pos = self.gettext(id)
-        return 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (self.moons[pos[id]['moonID']], pos[id]['- quantity'])
+        return 'THE TOWER AT %s NEEDS FUELS PLS - %d remaining' % (moons[pos[id]['moonID']], pos[id]['- quantity'])
     def tcualert(self, id):
         return 'Someone shot a TCU we own!'
     def sbushot(self, id):
@@ -216,6 +218,12 @@ class MUCBot(sleekxmpp.ClientXMPP):
                               mbody='%s: Confirming a command works proper' % msg['mucnick'],
                               mtype='groupchat')
 
+        if msg['mucnick'] != self.nick and '!lastmsg'  in msg['body']:
+            self.send_message(mto=msg['from'].bare,
+                              mbody='%s: %s' % (msg['mucnick'], self.lastnotification),
+                              mtype='groupchat')
+
+
     def towers(self):
         '''
         We call the CCP API once every thirty minutes for any new notifications.  We don't care if it's beed read.
@@ -251,6 +259,7 @@ class MUCBot(sleekxmpp.ClientXMPP):
                 sendme = self.noteid().get(notes[0][notificationID]['type_id'], '')
                 if sendme:
                     message = sendme(notificationID)
+                    self.lastnotification = message
                     self.send_message(mto=mess['from'].bare, mbody=message, mtype='groupchat')
 
     def muc_online(self, presence):
